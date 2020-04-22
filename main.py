@@ -10,7 +10,7 @@ class qbt_search():
         
     def __init__(self, search_term):
 
-        self.qbt_client = qbittorrentapi.Client(host='', username='', password='')
+        self.qbt_client = qbittorrentapi.Client(host='192.168.1.248:8080', username='admin', password='adminadmin')
 
         try:
             self.qbt_client.auth_log_in()
@@ -38,43 +38,49 @@ def search(bot, update):
     text = msg.text.split(' ')
     search = " "
     search = search.join(text[1:])
-    print(search)
 
-    bot.send_message(chat_id=chat_id, text="Fetching results...")
+    message_info = bot.send_message(chat_id=chat_id, text="Fetching results...")
+    message_id = message_info['message_id']
 
     search_obj = qbt_search(search)
 
     title = ''
 
     for result in search_obj.search_result.results:
-        title = title + f"Name: {result.fileName}\nSeeders: {result.nbSeeders}\nSize: {result.fileSize}\n\n"
+        title = title + f"*Name:* _{result.fileName}_\n*Seeders:* _{result.nbSeeders}_\n*Size:* _{round(result.fileSize/(1024*1024*1024),2)} GB_\n\n"
 
-    keyboard = [[InlineKeyboardButton(text="Magnet 1", callback_data=search+'0')],
-                [InlineKeyboardButton(text="Magnet 2", callback_data=search+'1')],
-                [InlineKeyboardButton(text="Magnet 3", callback_data=search+'2')]]
+    keyboard = [[InlineKeyboardButton(text="Magnet 1", callback_data=f'{search}|0|{message_id}')],
+                [InlineKeyboardButton(text="Magnet 2", callback_data=f'{search}|1|{message_id}')],
+                [InlineKeyboardButton(text="Magnet 3", callback_data=f'{search}|2|{message_id}')]]
 
     kb_markup = InlineKeyboardMarkup(keyboard)
     try:
-        bot.send_message(chat_id=chat_id, text=title, reply_markup=kb_markup)
-    except: bot.send_message(chat_id=chat_id, text="No results found")
+        bot.edit_message_text(message_id = message_id, chat_id=chat_id, text=title, reply_markup=kb_markup, parse_mode = 'markdown')
+    except: 
+        bot.edit_message_text(message_id = message_id, chat_id=chat_id, text="No results found")
 
 def button(bot, update):
     
     query = update.callback_query
     query.answer()
-    
-    query.bot.send_message(chat_id=query.message.chat_id, text="sending magnet")
 
-    search_obj = qbt_search(query.data[:-1])
-    index = int(query.data[-1])
+    data = query.data.split('|')
+
+    search = data[0]
+    index = int(data[1])
+    message_id = data[2]
     
-    query.bot.send_message(chat_id=query.message.chat_id, text=search_obj.magnet_list[index])
+    query.bot.edit_message_text(message_id = message_id, chat_id=query.message.chat_id, text="sending magnet")
+
+    search_obj = qbt_search(search)
+    
+    query.bot.edit_message_text(message_id = message_id, chat_id=query.message.chat_id, text=f'```{search_obj.magnet_list[index]}```', parse_mode = 'markdown')
 
 def main():
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    updater = Updater(token="")
+    updater = Updater(token="1128514006:AAHVDTxMv_mWqnZzghzPWfGxHwiSVOKfgY8")
 
     dispatcher = updater.dispatcher
 
